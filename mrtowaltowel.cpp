@@ -171,7 +171,7 @@ class [[eosio::contract]] mrtowaltowel : public eosio::contract {
 
         [[eosio::action]]
         void getversion() {
-            print("MrTowalTowel SC v1.5 - proitidgovex - 20200809\t");
+            print("MrTowalTowel SC v1.7 - proitidgovex - 20200812\t");
             print("Max Message ", get_param_maxmessages(), " Promo ", get_param_promo(), " Promo Amout ", get_param_promoamount(), " Record Number ", get_param_recordnumber());
         }
 
@@ -204,13 +204,12 @@ class [[eosio::contract]] mrtowaltowel : public eosio::contract {
         void clearexpired() {
             require_auth(_self);
 
-            msgcounters _msgcounters(get_self(), get_self().value);
+            //msgcounters _msgcounters(get_self(), get_self().value);
             postits _postits(get_self(), get_self().value);
 
             auto itr = _postits.begin();
             
-            while (itr != _postits.end()) {
-
+            for (auto itr = _postits.begin(); itr != _postits.end(); itr++) {
                 if( itr->expired_time < now() ) {
                     itr = _postits.erase(itr);
 
@@ -228,6 +227,39 @@ class [[eosio::contract]] mrtowaltowel : public eosio::contract {
 
             }
             print("All expired records are deleted!");
+        }
+
+        [[eosio::action]]
+        void clearpostit( uint64_t id ) {
+            require_auth(_self);
+
+            msgcounters _msgcounters(get_self(), get_self().value);
+            postits _postits(get_self(), get_self().value);
+
+            auto itr = _postits.find( id );
+            
+            if( itr != _postits.end() ) {
+                    itr = _postits.erase(itr);
+
+                    dec_msg_counter( itr->sender );
+            }
+            print("Poist it id ", id, " is deleted!");
+        }
+
+        [[eosio::action]]
+        void modifypostit( uint64_t id, uint32_t expired_time ) {
+            require_auth(_self);
+
+            postits _postits(get_self(), get_self().value);
+
+            auto itr = _postits.find( id );
+            
+            if( itr != _postits.end() ) {
+                _postits.modify( itr, get_self(), [&](auto &row) {
+                    row.expired_time = expired_time;
+                });
+            }
+            print("Poist it id ", id, " is deleted!");
         }
 
 
@@ -296,24 +328,20 @@ class [[eosio::contract]] mrtowaltowel : public eosio::contract {
                 // increase recordnumber
                 inc_param_recordnumber();
 
-                // Get account registeronme balance
-                /*
-                accounts _accounts("vex.token"_n, "mrtowaltowel"_n.value);
-                const auto sym_name = symbol_code("VEX");
-                const auto& registeronme = _accounts.get( sym_name.raw() );
-                */
-
                 // if promo, return back the VEX to sender
                 if ( get_param_promo() > now() ) {
                     
                     asset quantity_promo;
-                    
+                    /*
                     if ( quantity.amount > (get_param_promoamount() * 10000) ) {
                         quantity_promo = asset( quantity.amount - (get_param_promoamount() * 10000), quantity.symbol ); 
                     } else {
                         quantity_promo = asset( quantity.amount, quantity.symbol ); 
                     }
-                    
+                    */
+
+                    quantity_promo = asset ( get_param_promoamount() * 10000, quantity.symbol );
+
                     action(
                         permission_level{ _self, "active"_n },
                         "vex.token"_n, "transfer"_n,
